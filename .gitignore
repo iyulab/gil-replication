@@ -1,0 +1,12 @@
+# Downloaded data and built streams stay local
+*.csv
+*.zip
+*.jsonl
+*.jsonl.gz
+*.result.json
+nvd-raw/
+bz-raw/
+nvd-world/
+bz-world*/
+__pycache__/
+.venv/
