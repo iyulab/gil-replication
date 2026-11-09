@@ -17,6 +17,7 @@ the same public data may differ, and what the result does not show. Read the cav
 [`note/note.tex`](note/note.tex) is a short note that reports the revision claim and the watch that notices it in one
 place, and asks for counterexamples: a stream where carrying memory over such a revision keeps the promise, or where
 the watch stays silent after one. Open an issue in this repository with the stream and the command that rebuilds it.
+An archived copy with a DOI is at [10.5281/zenodo.24069104](https://doi.org/10.5281/zenodo.24069104).
 
 ## Closest alternatives
 
