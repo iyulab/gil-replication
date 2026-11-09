@@ -12,6 +12,12 @@ data, builds replay streams with the standard library, and prints the tables its
 Each kit README states the claim, the method, the commands, the results to compare against, how a later download of
 the same public data may differ, and what the result does not show. Read the caveats before quoting a number.
 
+## Note and counterexamples
+
+[`note/note.tex`](note/note.tex) is a short note that reports the revision claim and the watch that notices it in one
+place, and asks for counterexamples: a stream where carrying memory over such a revision keeps the promise, or where
+the watch stays silent after one. Open an issue in this repository with the stream and the command that rebuilds it.
+
 ## Closest alternatives
 
 Score-threshold tools such as CalibRoute and the risk-control module of MAPIE choose a confidence threshold on a
