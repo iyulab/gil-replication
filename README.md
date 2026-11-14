@@ -58,3 +58,24 @@ Apache License 2.0 — see [LICENSE](LICENSE). Copyright iyulab.
 
 The data each kit downloads stays under the terms of its source (City of Chicago Data Portal, OSHA, NIST NVD, Mozilla
 Bugzilla); this repository contains code and text only.
+
+## Data sources, request pacing and pseudonyms
+
+What the kits do when they touch the sources (a factual description, not legal advice; read each source's terms before
+you run a download):
+
+| Source | How the kit fetches it | Pacing and credentials |
+|---|---|---|
+| City of Chicago Data Portal (Food Inspections) | one `curl` request given in the kit README | no app token; the request is made by hand |
+| OSHA Severe Injury Reports | none: you download the zip file by hand in a browser | the kit sends no request to OSHA |
+| NIST NVD (CVE change history) | `abstention-claim/fetch_nvd.py`, requests one after another | 7 s sleep after every request, 30 s wait after an error, no API key |
+| Mozilla Bugzilla (REST, anonymous read) | `abstention-claim/fetch_bugzilla.py`, requests one after another | 1 s sleep after every request, growing pauses on error, no account; it is a one-off bulk download, not polling |
+
+The scripts do not set a `User-Agent`, so Python's default is sent. They keep no cache beyond skipping files already
+downloaded and resuming an interrupted history download.
+
+Account and business names are replaced by the first 12 hex digits of a SHA-256 hash (Bugzilla reporters, Chicago
+`license_`, OSHA `Employer`). The hash has **no salt and no key**, so it is a pseudonym, not anonymisation: anyone who
+can guess an input can recompute its value. The scripts never write a reporter's name or address to disk and the
+Bugzilla history step does not keep the author of a change. The hash values exist only on the machine that runs a
+download or a build; they are not part of this repository.
