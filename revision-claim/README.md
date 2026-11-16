@@ -300,7 +300,7 @@ retrained and re-thresholded classifier, both stayed near the 0.90 target, with 
 * **Time.** See above: minutes on a many-core workstation, longer on a laptop. Memory was not measured.
 * **Python.** `iyulab-gil` 0.10.0 requires Python 3.11 or newer; `numpy` is not needed.
 
-## Does the watch notice the revision?
+## Does the monitor notice the revision?
 
 **Claim.** A keeper that is never told about the revision still notices it from what people do with its answers. Made
 with `watch_realized=True` (experimental), `keeper.stale()` says `{"realized": ...}` when, of the last 100 answers whose
@@ -363,12 +363,12 @@ repeat is the table above.
 * **The thirteen streams without a revision are not replayed here.** The kit has no builder for them. The only
   evidence of "no alarm without a revision" the kit produces is the part of the two streams before the revision (83,245
   and 85,842 records after the first 5,000, 0 alarms); that is two streams, not thirteen. The package README states that on thirteen public
-  streams with no revision the watch never fired, and that on public device recalls with no revision it said so once,
+  streams with no revision the monitor never fired, and that on public device recalls with no revision it said so once,
   on a nine-day run of recalls from one firm that the memory answered wrongly. Both sentences were checked against the
   package README text only, not by replaying those streams.
 * **The answers and their rightness are derived.** Nobody accepted or corrected anything: an answer counts as right
   when it equals the code the source lists, and `Accept` / `Correct` are set from that. In an application, people may
-  accept wrong answers or correct right ones, and only some answers may be checked; the watch is as good as the
+  accept wrong answers or correct right ones, and only some answers may be checked; the monitor is as good as the
   settlements it is given.
 * **Two worlds, one setting.** Target 0.9, a window of 100 and a margin of 0.15 (the package's constants), the first
   choice after 5,000 records, a revision that arrives after 88,000 or more records. The alarm needs 100 judged answers
@@ -382,5 +382,112 @@ repeat is the table above.
   ones described under "Portal data keeps changing" above. `alarm.py` was not rerun on a stream built from a later
   download, where some records are ordered differently within their inspection; the alarm position can move by a few
   records with such a reordering.
-* **The watch is experimental in the package** and its reason is a signal to look at what the window holds, not a
+* **The monitor is experimental in the package** (`watch_realized` in the package API) and its reason is a signal to look at what the window holds, not a
   statement that a code list was revised.
+
+## How fragile is the monitor, and does a sequential test do better?
+
+Three further scripts re-count the monitor on the traces that `alarm.py` writes (`--out` and `--trace`). They need no
+download beyond the streams above. `window_margin.py` and `sequential_monitor.py` take the two files of each world;
+`sequential_monitor.py` also needs numpy.
+
+```sh
+# the traces (the stream commands are above); add --trace to each alarm.py run
+uv run --no-project --isolated --with iyulab-gil==0.10.0 python alarm.py osha.stream.jsonl.gz \
+  --slot nature --boundary v3 --out osha.alarm.json --trace osha.trace.jsonl
+uv run --no-project --isolated --with iyulab-gil==0.10.0 python alarm.py chicago.stream.jsonl.gz \
+  --slot violation --boundary 2018 --after 120000 --out chicago.alarm.json --trace chicago.trace.jsonl
+
+# window x margin (standard library only)
+python window_margin.py osha.alarm.json osha.trace.jsonl --world osha --out osha.cells.json
+python window_margin.py chicago.alarm.json chicago.trace.jsonl --world chicago --out chicago.cells.json
+```
+
+**Window and margin.** Each script replays the rule of `alarm.py` first (window 100, margin 0.15) and refuses to count
+anything if that replay does not give `alarm.py`'s alarm list. Then it counts nine cells (windows 50, 100, 200; margins
+0.10, 0.15, 0.20; alarm line = 0.9 minus the margin). `false alarm` means an alarm before the revision; `on time` means
+a first alarm less than 1,000 records after the revision and no alarm before it. With the traces of the 0.10.0 / 0.13.0
+runs (the two package versions gave the same traces):
+
+OSHA severe injury reports
+
+| Window | Margin | Line | Alarms | False alarms | Delay | Label |
+| ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 50 | 0.10 | 0.80 | 10 | 7 | 68 | false alarm |
+| 50 | 0.15 | 0.75 | 7 | 4 | 79 | false alarm |
+| 50 | 0.20 | 0.70 | 3 | 0 | 92 | on time |
+| 100 | 0.10 | 0.80 | 7 | 4 | 106 | false alarm |
+| 100 | 0.15 | 0.75 | 3 | 0 | 163 | on time |
+| 100 | 0.20 | 0.70 | 3 | 0 | 184 | on time |
+| 200 | 0.10 | 0.80 | 3 | 0 | 199 | on time |
+| 200 | 0.15 | 0.75 | 3 | 0 | 259 | on time |
+| 200 | 0.20 | 0.70 | 3 | 0 | 319 | on time |
+
+Chicago food inspections
+
+| Window | Margin | Line | Alarms | False alarms | Delay | Label |
+| ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 50 | 0.10 | 0.80 | 6 | 0 | 24 | on time |
+| 50 | 0.15 | 0.75 | 3 | 0 | 29 | on time |
+| 50 | 0.20 | 0.70 | 2 | 0 | 35 | on time |
+| 100 | 0.10 | 0.80 | 2 | 0 | 44 | on time |
+| 100 | 0.15 | 0.75 | 2 | 0 | 54 | on time |
+| 100 | 0.20 | 0.70 | 2 | 0 | 64 | on time |
+| 200 | 0.10 | 0.80 | 2 | 0 | 89 | on time |
+| 200 | 0.15 | 0.75 | 2 | 0 | 114 | on time |
+| 200 | 0.20 | 0.70 | 2 | 0 | 144 | on time |
+
+The narrower the window or the margin, the earlier the first alarm. On OSHA the narrow cells also raise alarms before the
+revision (three of the nine cells: windows 50 with margins 0.10 and 0.15, and window 100 with margin 0.10); on Chicago
+none of the nine does. The default cell (100, 0.15) has little room on OSHA.
+
+**A sequential test in place of the window.** `sequential_monitor.py` puts a one-sided Bernoulli CUSUM (a test of a drop
+from p0 to p1 in the share of answered records that are right, alarm at S >= h) beside the fixed window, on the same
+traces and with the same 5,000-record quiet period. The thresholds h are chosen first from synthetic i.i.d. data only, so
+that the average run length before a false alarm is at least L answered records (L = 10,000, 50,000, 250,000); the table
+of h is written before the traces are read. Two arms differ in p0: Cp (p0 = 0.90, p1 = 0.75) and Cm (p0 = 0.825, p1 = 0.75).
+
+```sh
+python sequential_monitor.py calibrate calibration.json        # numpy; seeded; a few minutes
+python sequential_monitor.py run calibration.json cells.json \
+  --world osha osha.alarm.json osha.trace.jsonl --world chicago chicago.alarm.json chicago.trace.jsonl
+```
+
+| World | Rule | L | h | Alarms | False alarms | Delay | Label | Against the window |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| osha | fixed window (R) | - | - | 3 | 0 | 163 | on time | - |
+| osha | CUSUM Cp | 10,000 | 6.5 | 8 | 5 | 53 | false alarm | worse |
+| osha | CUSUM Cp | 50,000 | 8.0 | 6 | 3 | 59 | false alarm | worse |
+| osha | CUSUM Cp | 250,000 | 9.6 | 3 | 0 | 77 | on time | better |
+| osha | CUSUM Cm | 10,000 | 5.2 | 3 | 0 | 92 | on time | tie |
+| osha | CUSUM Cm | 50,000 | 6.8 | 3 | 0 | 128 | on time | tie |
+| osha | CUSUM Cm | 250,000 | 8.5 | 3 | 0 | 172 | on time | tie |
+| chicago | fixed window (R) | - | - | 2 | 0 | 54 | on time | - |
+| chicago | CUSUM Cp | 10,000 | 6.5 | 4 | 0 | 20 | on time | better |
+| chicago | CUSUM Cp | 50,000 | 8.0 | 3 | 0 | 21 | on time | better |
+| chicago | CUSUM Cp | 250,000 | 9.6 | 3 | 0 | 24 | on time | better |
+| chicago | CUSUM Cm | 10,000 | 5.2 | 2 | 0 | 31 | on time | tie |
+| chicago | CUSUM Cm | 50,000 | 6.8 | 2 | 0 | 43 | on time | tie |
+| chicago | CUSUM Cm | 250,000 | 8.5 | 2 | 0 | 51 | on time | tie |
+
+A cell is `better` than the window on the same world when it is on time and the window is not, or both are on time and its
+delay is at most half of the window's; `worse` in the mirror case; otherwise `tie`. Neither arm is better in all six of
+its cells: Cm ties with the window in every cell. Cp raises false alarms on OSHA at the two shorter run lengths
+(5 and 3 alarms before the revision); at L = 250,000 it is on time on both worlds and better than the window on both
+(OSHA 77 records against 163, Chicago 24 against 54), but its largest S before the revision on OSHA is 9.03 against
+h = 9.6, a small margin. This is a reading on two traces with one revision each. The thresholds are calibrated on i.i.d.
+data, which a correlated stream does not honour (the false alarms of Cp on OSHA are a case in point).
+
+**Other targets, classifiers and a threshold-only refit.** The same scripts take options that move the setting without
+changing the default (their output matched the earlier runs of the same cells record for record; `neighbors.py` now also writes
+`classifier` and `target` into its result file):
+
+* `alarm.py`, `carryover.py` and `neighbors.py` accept `--target 0.80` or `--target 0.95` instead of 0.9.
+* `neighbors.py` accepts `--classifier nb` (multinomial naive Bayes, alpha 0.1) or `--classifier rf` (a random forest,
+  100 trees, seed 0) instead of the logistic regression, for every arm.
+* `neighbors.py --threshold-only --no-refit` runs only the arm `R-TH`: the classifier stays as trained before the
+  revision and only the threshold is refitted on the last 30% of the settled records after it, at the points where `R-CR`
+  refits. On both worlds, in all five seeds, it answered nothing in any range of records after the revision.
+
+**Still not replayed here:** the thirteen streams without a revision, the three further streams, and the comparison with a
+rule that pools all bands (21 false alarms in the earlier note). They need builders and scripts this kit does not have.

@@ -11,7 +11,7 @@
 \usepackage{url}
 
 \title{Carrying memory across a code-list revision breaks a precision promise:\\
-two public streams, a watch that notices, and a request for counterexamples}
+two public streams, a monitor that notices, and a request for counterexamples}
 \author{iyulab}
 \date{}
 
@@ -25,12 +25,12 @@ quickly the failure can be seen. On two public record streams whose code list wa
 rewritten (Chicago food inspection violations, 2018 food code; OSHA severe injury reports, OIICS~3.0), a keeper that
 carried its memory over the revision promised 0.94 and 0.87 precision for the first 1{,}000 records after it and
 realized 0.44 and 0.007. A keeper that started its memory at the revision kept its promise in every range of records in
-which it answered. A watch that compares the last 100 answers whose rightness came back against the target raised its
+which it answered. A realized-precision monitor that compares the last 100 answers whose rightness came back against the target raised its
 first alarm 54 and 163 records after the revision, with no alarm before it, and none on thirteen other public streams
 without a revision. Two score-threshold tools that freeze their threshold before the revision answered 92--100\% of the
 records afterwards with fewer than 10\% right. Everything here is two streams, derived (not human-confirmed)
 settlements, and one setting; a public kit rebuilds every table from the public data with a published package. We ask
-for counterexamples: a stream where carrying memory over such a revision keeps the promise, or where the watch stays
+for counterexamples: a stream where carrying memory over such a revision keeps the promise, or where the monitor stays
 silent after one.
 \end{abstract}
 
@@ -39,8 +39,9 @@ silent after one.
 Many record-keeping systems suggest a field's value from records already settled and let a person confirm or correct
 it. Answering only above a threshold is selective prediction: the share answered is the coverage, and one minus the
 precision of the answers is the selective risk~\cite{geifman2017}. A threshold chosen on a validation sample for a
-stated precision is the usual way to make that risk a promise~\cite{ltt,crc}; its guarantee assumes the records to come
-are exchangeable with the sample.
+stated precision is the usual way to make that risk a promise: selection with guaranteed risk~\cite{geifman2017} and
+the selective-classification case of Learn then Test (Section 3.2)~\cite{ltt} bound the error among the answered records
+when the records to come are exchangeable with the sample, and that is the assumption a revision breaks.
 
 The keeper studied here (Gil, open source~\cite{gil}) does not hold out a sample. It replays the settled records in the
 order they were settled, choosing thresholds per layer of evidence (an exact key, similar earlier records) so that the
@@ -59,7 +60,7 @@ after it.
   \item \textbf{Break.} A keeper that carries its memory over a revision that rewrites code numbers promises far more
   than it realizes in the first records after the revision.
   \item \textbf{Split.} A keeper that starts its memory at the revision keeps its promise there.
-  \item \textbf{Detection.} A watch on the realized precision of the answers whose rightness came back notices the
+  \item \textbf{Detection.} A monitor on the realized precision of the answers whose rightness came back notices the
   revision within a few hundred records, without being told about it, and does not fire on streams without a revision.
 \end{enumerate}
 
@@ -80,9 +81,9 @@ and 4{,}000 records, and from then on whenever the settled records have grown by
 revision we report the answered count, the precision of the answers, the promise (mean of what the answering layer
 promised) and their difference with a Wilson 95\% interval on the answered records, the promise treated as fixed.
 
-\paragraph{Watch.} A separate run follows each stream without telling the keeper about the revision. The first 5{,}000
+\paragraph{Monitor.} A separate run follows each stream without telling the keeper about the revision. The first 5{,}000
 records are settled as typed; afterwards each record is answered first, and an answer shown is settled as accepted when
-it equals the source code and as corrected when it does not. The watch says the choice no longer stands when, of the
+it equals the source code and as corrected when it does not. The monitor says the choice no longer stands when, of the
 last 100 answers whose rightness came back, fewer than the target less 0.15 (0.75) were right. An alarm is counted at
 its first appearance, with at least 5{,}000 records and 100 judged answers since the previous one.
 
@@ -124,7 +125,7 @@ answered and was wrong. Further on, arm~C recovers in Chicago (0.972 realized ag
 
 \begin{table}[h]
 \centering
-\caption{The realized-precision watch, not told about the revision.}
+\caption{The realized-precision monitor, not told about the revision.}
 \label{tab:watch}
 \begin{tabular}{lrrrrr}
 \toprule
@@ -137,9 +138,9 @@ OSHA & 105{,}991 & 88{,}245 & 3 & 0 & 163 records \\
 \end{table}
 
 The later alarms are the carried-over memory still answering with old codes more than 5{,}000 records on; the run does
-nothing with an alarm. On thirteen public streams without a revision the same watch with the same constants raised no
+nothing with an alarm. On thirteen public streams without a revision the same monitor with the same constants raised no
 alarm. On three further streams not used in setting it, it raised one: a nine-day run of recalls from one firm, all
-answered wrongly by the memory --- a burst from one source, not a revision. For this reason the watch only reports; we
+answered wrongly by the memory --- a burst from one source, not a revision. For this reason the monitor only reports; we
 do not restart the memory on an alarm.
 
 \paragraph{Frozen thresholds.} On the pre-revision hold-out every frozen policy met its target (0.949--0.952 precision
@@ -177,9 +178,9 @@ retrained 0.86 at 0.89 and 0.09 at 0.92, Chicago and OSHA respectively).
   \item \textbf{Two streams, one kind of revision.} Both revisions rewrite code numbers. Nothing here is about a
   revision that changes no code, or about other streams.
   \item \textbf{Derived settlements.} A record is settled with the code the source lists. In use, people may accept
-  wrong answers or correct right ones, and only some answers may be checked; the watch is as good as the settlements it
+  wrong answers or correct right ones, and only some answers may be checked; the monitor is as good as the settlements it
   gets.
-  \item \textbf{One setting.} Target 0.9, a window of 100 and a margin of 0.15. The watch assumes the default threshold
+  \item \textbf{One setting.} Target 0.9, a window of 100 and a margin of 0.15. The monitor assumes the default threshold
   rule, which keeps a floor under every band of evidence; with a rule that pools all bands it raised 21 false alarms
   across the thirteen streams without a revision, against none.
   \item \textbf{Splitting has a price.} Starting the memory at a boundary where codes did not change costs answers on
@@ -193,7 +194,7 @@ retrained 0.86 at 0.89 and 0.09 at 0.92, Chicago and OSHA respectively).
 \section{The request}
 
 We would like to hear of any public stream where (a) a classification edition rewrites code numbers and a memory
-carried across it still keeps a stated precision in the first records after it, or (b) the realized-precision watch
+carried across it still keeps a stated precision in the first records after it, or (b) the realized-precision monitor
 stays silent for more than 1{,}000 records after such a revision, or (c) it fires on a stream without a revision for a
 reason other than a burst from one source. Each would narrow or break a claim above. The kit~\cite{kit} builds both
 streams from the public data and prints every table in this note with \texttt{iyulab-gil} 0.10.0 from PyPI:
@@ -214,8 +215,6 @@ last digit. The OSHA run is fixed by the archive's SHA-256 and prints its tables
 arXiv:1705.08500.
 \bibitem{ltt} A.~N. Angelopoulos, S.~Bates, E.~J. Cand\`es, M.~I. Jordan, L.~Lei. Learn then Test: calibrating
 predictive algorithms to achieve risk control. Annals of Applied Statistics; arXiv:2110.01052.
-\bibitem{crc} A.~N. Angelopoulos, S.~Bates, A.~Fisch, L.~Lei, T.~Schuster. Conformal risk control. ICLR 2024;
-arXiv:2208.02814.
 \bibitem{gil} Gil. \url{https://github.com/iyulab/gil} (package \texttt{iyulab-gil} on PyPI and crates.io, \texttt{Gil}
 on NuGet).
 \bibitem{calibroute} CalibRoute, \texttt{calibroute-ai} 0.4.0. \url{https://pypi.org/project/calibroute-ai/}

@@ -294,8 +294,11 @@ def main() -> None:
     ap.add_argument("--before", type=int, help="keep only the last N records before the revision")
     ap.add_argument("--after", type=int, help="keep only the first N records after the revision")
     ap.add_argument("--arms", default="N,C", help="comma-separated, from N and C (default N,C)")
+    ap.add_argument("--target", type=float, default=0.9, help="the target precision (default 0.9)")
     ap.add_argument("--out", type=Path, help="write the result as JSON")
     a = ap.parse_args()
+    global TARGET
+    TARGET = a.target
     arms = tuple(x for x in a.arms.split(",") if x in ("N", "C"))
     if not arms:
         raise SystemExit("--arms must name N and/or C")

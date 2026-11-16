@@ -204,8 +204,11 @@ def main() -> None:
     ap.add_argument("--boundary", required=True, help="the form_version after the revision (2018 for Chicago, v3 for OSHA)")
     ap.add_argument("--after", type=int, help="follow only the first N records after the revision")
     ap.add_argument("--trace", type=Path, help="write one JSON line per record after the first 5,000")
+    ap.add_argument("--target", type=float, default=0.9, help="the target precision (default 0.9)")
     ap.add_argument("--out", type=Path, help="write the result as JSON")
     a = ap.parse_args()
+    global TARGET
+    TARGET = a.target
     result = run(a.stream, a.slot, a.boundary, a.after, a.trace)
     if a.out:
         a.out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")

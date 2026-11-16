@@ -47,6 +47,7 @@ from pathlib import Path
 import numpy as np
 
 TARGET = 0.90
+CLASSIFIER = "lr"  # the text classifier behind every arm: lr (default), nb or rf; see --classifier
 BATCH = 250
 MIN_ANSWERED = 30
 BUCKETS = ((0, 1_000), (1_000, 5_000), (5_000, 20_000), (20_000, None))
@@ -118,7 +119,18 @@ class Scorer:
         y = [str(r["targets"][slot]) for r in rows]
         if len(set(y)) < 2:
             raise ValueError("fewer than two classes")
-        self.clf = LogisticRegression(C=10, max_iter=300)
+        if CLASSIFIER == "lr":
+            self.clf = LogisticRegression(C=10, max_iter=300)
+        elif CLASSIFIER == "nb":
+            from sklearn.naive_bayes import MultinomialNB
+
+            self.clf = MultinomialNB(alpha=0.1)
+        elif CLASSIFIER == "rf":
+            from sklearn.ensemble import RandomForestClassifier
+
+            self.clf = RandomForestClassifier(n_estimators=100, random_state=0, n_jobs=2)
+        else:
+            raise SystemExit(f"unknown classifier {CLASSIFIER}")
         self.clf.fit(x, y)
 
     @staticmethod
@@ -237,6 +249,23 @@ def refit_answers(post: list[dict], slot: str):
     return answered, right
 
 
+def threshold_only_answers(conf, ok, n_post):
+    """R-TH: the classifier stays as trained before the revision; only the threshold is refitted at the R-CR points,
+    on the last 30 % of the records settled after the revision (the share R-CR calibrates on)."""
+    limit = min(REFIT_LIMIT, n_post)
+    answered = np.zeros(limit, dtype=bool)
+    right = ok[:limit].copy()
+    for p, q in itertools.pairwise(refit_points(limit)):
+        if p < MIN_ANSWERED:
+            continue
+        t = int(p * 0.7)
+        policy, _ = calibroute_policy(conf[t:p], ok[t:p])
+        if policy is None:
+            continue
+        answered[p:q] = conf[p:q] >= policy.accept_threshold
+    return answered, right
+
+
 def tally(answered, right, flagged=None) -> list[dict]:
     out = []
     for lo, hi in BUCKETS:
@@ -274,7 +303,7 @@ def hold_out_check(answered, right) -> dict:
 
 
 def run_seed(
-    seed: int, pre: list[dict], post: list[dict], slot: str, refit: bool
+    seed: int, pre: list[dict], post: list[dict], slot: str, refit: bool, threshold_only: bool = False
 ) -> dict:
     ids = sorted({str(r.get("batch") or r["id"]) for r in pre})
     order = np.random.default_rng(seed).permutation(len(ids))
@@ -303,6 +332,11 @@ def run_seed(
         "hold_out": {},
         "arms": {},
     }
+
+    if threshold_only:
+        a_th, r_th = threshold_only_answers(conf, ok, len(post))
+        out["arms"]["R-TH"] = tally(a_th, r_th)
+        return out
 
     policy, note = calibroute_policy(cal_conf, cal_ok)
     out["notes"]["calibroute"] = note
@@ -355,7 +389,7 @@ def table(result: dict) -> str:
         f"{'arm':<7}{'records after':<16}{'seeds':>6}{'answered':>10}{'share':>8}{'precision':>10}  Wilson 95%   flagged batches"
     )
     arms = {a for s in result["seeds"].values() for a in s["arms"]}
-    for arm in ("F-CR", "F-CRg", "F-MP", "R-CR"):
+    for arm in ("F-CR", "F-CRg", "F-MP", "R-CR", "R-TH"):
         if arm not in arms:
             continue
         for i, (lo, hi) in enumerate(BUCKETS):
@@ -432,12 +466,16 @@ def main() -> None:
         help="seeds of the pre-revision split (default 0,1,2,3,4)",
     )
     ap.add_argument("--no-refit", action="store_true", help="skip the R-CR arm")
+    ap.add_argument("--threshold-only", action="store_true", help="run only the R-TH arm (classifier fixed, threshold refitted)")
+    ap.add_argument("--classifier", choices=("lr", "nb", "rf"), default="lr", help="the text classifier behind every arm (default lr)")
+    ap.add_argument("--target", type=float, default=0.9, help="the target precision (default 0.9)")
     ap.add_argument("--out", type=Path, help="write the result as JSON")
     a = ap.parse_args()
 
     from importlib.metadata import version
 
-    global TEXT, CATS
+    global TEXT, CATS, TARGET, CLASSIFIER
+    TARGET, CLASSIFIER = a.target, a.classifier
     world = WORLDS[a.world]
     TEXT, CATS = world["text"], world["cats"]
     a.slot = a.slot or world["slot"]
@@ -451,12 +489,14 @@ def main() -> None:
         "mapie": version("mapie"),
         "calibroute_ai": version("calibroute-ai"),
         "scikit_learn": version("scikit-learn"),
+        "classifier": CLASSIFIER,
+        "target": TARGET,
         "seeds": {},
     }
     for seed in (int(s) for s in a.seeds.split(",")):
         t0 = time.perf_counter()
         result["seeds"][str(seed)] = run_seed(
-            seed, pre, post, a.slot, refit=not a.no_refit
+            seed, pre, post, a.slot, refit=not a.no_refit, threshold_only=a.threshold_only
         )
         print(
             f"seed {seed}: {time.perf_counter() - t0:.0f} s",

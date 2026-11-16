@@ -14,9 +14,9 @@ the same public data may differ, and what the result does not show. Read the cav
 
 ## Note and counterexamples
 
-[`note/note.tex`](note/note.tex) is a short note that reports the revision claim and the watch that notices it in one
+[`note/note.tex`](note/note.tex) is a short note that reports the revision claim and the realized-precision monitor that notices it in one
 place, and asks for counterexamples: a stream where carrying memory over such a revision keeps the promise, or where
-the watch stays silent after one. Open an issue in this repository with the stream and the command that rebuilds it.
+the monitor stays silent after one. Open an issue in this repository with the stream and the command that rebuilds it.
 An archived copy with a DOI is at [10.5281/zenodo.24069104](https://doi.org/10.5281/zenodo.24069104).
 
 ## Closest alternatives
@@ -26,6 +26,17 @@ held-out sample and then keep it fixed; CalibRoute documents that its check assu
 it will see, and it ships a batch shift check. Gil's keeper works the other way round: it replays the records people
 have confirmed in the order they were settled, chooses its thresholds again as confirmations arrive, and reports the
 precision it realized next to the precision it promised.
+
+These are the tools we could run as documented, not a survey of what bears on the problem. Two published procedures
+choose a threshold on a calibration sample so that the error among the answered records stays below a target: selection
+with guaranteed risk (Geifman and El-Yaniv, arXiv:1705.08500) and the selective-classification case of Learn then Test
+(Angelopoulos et al., arXiv:2110.01052, Section 3.2); both guarantee it for exchangeable records. Methods that do not
+freeze their policy are another family: weighted conformal prediction for non-exchangeable data (Barber et al.,
+arXiv:2202.13415) and adaptive conformal inference (Gibbs and Candès, arXiv:2106.00170) bound the coverage of
+prediction sets or an expected loss over all records, and drift-triggered abstention with an online risk certificate
+(Lamaakal et al., arXiv:2603.08578) bounds the error over all records of a window from the labels of a uniformly random
+sample of them. We did not run any of these, and none of them states, in the parts we read, a guarantee on the precision
+of the answers given across a documented revision. Whether a keeper does something they cannot is not shown here.
 
 We ran both tools as documented on the two revision streams above (food-inspection violations; severe-injury reports),
 with one off-the-shelf text classifier supplying the confidence (`calibroute-ai` 0.4.0, `mapie` 1.6.0,
@@ -39,7 +50,7 @@ answered, and a classifier retrained and re-thresholded on the records confirmed
 64% of the records at 98% precision in the first stream and 7% at 93% in the second, while the retrained threshold
 answered 86% at 89% and 9% at 92%, and, from record 5,000 on in the second stream, 56% at 91%.
 
-Gil's realized-precision watch, which needs the outcomes of the answers it shows, raised its first alarm 54 records
+Gil's realized-precision monitor, which needs the outcomes of the answers it shows, raised its first alarm 54 records
 (first stream) and 163 records (second stream) after the revision, with no alarm before it; CalibRoute's shift check
 needs no outcomes, and it fired only in the first stream.
 
