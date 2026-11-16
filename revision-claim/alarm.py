@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does the realized-precision watch notice a revision nobody named? One keeper, one stream, no edition declared.
+"""Does the realized-precision monitor notice a revision nobody named? One keeper, one stream, no edition declared.
 
     python alarm.py <stream.jsonl.gz> --slot <decided attribute> --boundary <form_version after the revision>
                     [--after N] [--trace trace.jsonl] [--out result.json]
@@ -51,7 +51,7 @@ TICK = 10_000_000  # one second in the 100-nanosecond ticks of `settled_at`
 TARGET = 0.9
 MINIMUM = 30
 GROWTH = 1.1
-START = 5_000  # records settled before the first choice; the watch starts here
+START = 5_000  # records settled before the first choice; the monitor starts here
 QUIET = 5_000  # records after an alarm during which no new alarm is counted
 
 

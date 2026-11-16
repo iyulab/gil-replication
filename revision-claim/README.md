@@ -399,8 +399,8 @@ uv run --no-project --isolated --with iyulab-gil==0.10.0 python alarm.py chicago
   --slot violation --boundary 2018 --after 120000 --out chicago.alarm.json --trace chicago.trace.jsonl
 
 # window x margin (standard library only)
-python window_margin.py osha.alarm.json osha.trace.jsonl --world osha --out osha.cells.json
-python window_margin.py chicago.alarm.json chicago.trace.jsonl --world chicago --out chicago.cells.json
+uv run --no-project --isolated python window_margin.py osha.alarm.json osha.trace.jsonl --world osha --out osha.cells.json
+uv run --no-project --isolated python window_margin.py chicago.alarm.json chicago.trace.jsonl --world chicago --out chicago.cells.json
 ```
 
 **Window and margin.** Each script replays the rule of `alarm.py` first (window 100, margin 0.15) and refuses to count
@@ -448,8 +448,8 @@ that the average run length before a false alarm is at least L answered records 
 of h is written before the traces are read. Two arms differ in p0: Cp (p0 = 0.90, p1 = 0.75) and Cm (p0 = 0.825, p1 = 0.75).
 
 ```sh
-python sequential_monitor.py calibrate calibration.json        # numpy; seeded; a few minutes
-python sequential_monitor.py run calibration.json cells.json \
+uv run --no-project --isolated --with numpy==2.5.4 python sequential_monitor.py calibrate calibration.json   # seeded
+uv run --no-project --isolated --with numpy==2.5.4 python sequential_monitor.py run calibration.json cells.json \
   --world osha osha.alarm.json osha.trace.jsonl --world chicago chicago.alarm.json chicago.trace.jsonl
 ```
 
