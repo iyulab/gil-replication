@@ -58,13 +58,17 @@ present. One request fetches every inspection from 2017-01-01 on (about 200 MB):
 
 ```sh
 curl -G 'https://data.cityofchicago.org/resource/4ijn-s7e5.csv' \
+  --retry 3 --retry-all-errors \
   --data-urlencode "\$where=inspection_date >= '2017-01-01T00:00:00'" \
   --data-urlencode '$order=inspection_date,inspection_id' \
   --data-urlencode '$limit=1000000' \
   -o inspections-2017-.csv
 ```
 
-Run on 2026-11-01 without an app token, exactly this request returned HTTP 200 and 175,995 inspections.
+Run on 2026-11-01 without an app token, exactly this request (without the `--retry` line) returned HTTP 200 and 175,995
+inspections. The connection can be reset partway through a download this size; `--retry-all-errors` (curl 7.71 or later)
+retries the transfer when it is. A complete file is a little over 200 MB. The build below refuses a file that ends inside a row, and `--min-inspections 175995` stops it when the file is
+shorter than that day's download; a download made later holds more.
 
 ### OSHA severe injury reports
 
@@ -93,7 +97,7 @@ only as an approximate comparison.
 ## Build the streams
 
 ```sh
-uv run --no-project python build_world.py chicago inspections-2017-.csv --out chicago.stream.jsonl.gz
+uv run --no-project python build_world.py chicago inspections-2017-.csv --min-inspections 175995 --out chicago.stream.jsonl.gz
 uv run --no-project python build_world.py osha January2015toNovember2025.zip --out osha.stream.jsonl.gz
 ```
 

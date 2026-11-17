@@ -190,12 +190,34 @@ def chicago_records(rows: list[dict], since: str):
     return out, counts
 
 
-def build_chicago(sources: list[Path], out: Path, since: str) -> dict:
+def read_inspections(source: Path) -> list[dict]:
+    """The rows of one downloaded inspections CSV; a file that was cut short stops the build instead of giving a smaller table.
+
+    A download that ends inside a row (inside a quoted cell, or after fewer cells than the header has) is refused. A cut
+    that falls exactly between two rows cannot be seen in the file; compare the inspection count printed at the end with
+    the README's, or pass `--min-inspections`.
+    """
+    with open(source, encoding="utf-8", newline="") as f:
+        try:
+            rows = list(csv.DictReader(f, strict=True))
+        except csv.Error as error:
+            raise SystemExit(f"{source}: the file ends inside a row ({error}); the download was cut short, fetch it again")
+    if rows and any(value is None for value in rows[-1].values()):
+        raise SystemExit(f"{source}: the last row has fewer cells than the header; the download was cut short, fetch it again")
+    with open(source, "rb") as f:
+        f.seek(0, 2)
+        if f.tell() and (f.seek(-1, 2), f.read(1))[1] not in (b"\n", b"\r"):
+            print(f"warning: {source} does not end with a line break; if the download was interrupted, fetch it again", file=sys.stderr)
+    return rows
+
+
+def build_chicago(sources: list[Path], out: Path, since: str, min_inspections: int = 0) -> dict:
     csv.field_size_limit(sys.maxsize)
     rows: list[dict] = []
     for source in sources:
-        with open(source, encoding="utf-8", newline="") as f:
-            rows.extend(csv.DictReader(f))
+        rows.extend(read_inspections(source))
+    if len(rows) < min_inspections:
+        raise SystemExit(f"read {len(rows):,} inspections, fewer than the {min_inspections:,} expected; the download is incomplete, fetch it again")
     rows.sort(key=lambda r: (text(r.get("inspection_date"))[:10], int(r.get("inspection_id") or 0)))
     records, counts = chicago_records(rows, since)
     stream, dropped = build_rows(records, CHICAGO_OBSERVED, ("violation",), require_all=False)
@@ -309,13 +331,14 @@ def main() -> None:
     c = sub.add_parser("chicago", help="Chicago food inspections CSV file(s) -> stream")
     c.add_argument("source", type=Path, nargs="+", help="inspection CSV file(s), any order")
     c.add_argument("--since", default=CHICAGO_SINCE, help="keep inspections on or after this date (default %(default)s)")
+    c.add_argument("--min-inspections", type=int, default=0, help="stop if fewer inspections are read (a cut at a row boundary shows only as a short count)")
     c.add_argument("--out", type=Path, default=Path("chicago.stream.jsonl.gz"))
     o = sub.add_parser("osha", help="OSHA severe injury reports (zip or CSV) -> stream")
     o.add_argument("source", type=Path, help="the downloaded zip, or the CSV inside it")
     o.add_argument("--out", type=Path, default=Path("osha.stream.jsonl.gz"))
     args = parser.parse_args()
     if args.world == "chicago":
-        summary = build_chicago(args.source, args.out, args.since)
+        summary = build_chicago(args.source, args.out, args.since, args.min_inspections)
     else:
         summary = build_osha(args.source, args.out)
     print(json.dumps(summary, indent=1))
