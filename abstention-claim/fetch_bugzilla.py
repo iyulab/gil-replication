@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import sys
 import time
@@ -64,7 +65,7 @@ def call(path: str, params: list[tuple[str, str]]) -> dict:
                 return json.load(error)
             except ValueError:
                 time.sleep(5 * (attempt + 1))
-        except (OSError, ValueError):
+        except (OSError, ValueError, http.client.HTTPException):  # IncompleteRead is neither OSError nor ValueError
             time.sleep(5 * (attempt + 1))
     raise SystemExit(f"giving up on {address}")
 

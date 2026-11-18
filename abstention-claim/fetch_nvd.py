@@ -21,6 +21,7 @@ pause.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import sys
 import time
@@ -52,7 +53,7 @@ def get(address: str) -> bytes:
                 body = response.read()
             json.loads(body)
             return body
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, http.client.HTTPException) as error:  # IncompleteRead is neither OSError nor ValueError
             print(f"  retry {attempt + 1}/5: {error}", file=sys.stderr, flush=True)
             time.sleep(30)
     raise SystemExit(f"giving up on {address}")
